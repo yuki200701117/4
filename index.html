@@ -1,0 +1,498 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+#app{font-family:var(--font-sans);padding:6px 0}
+.row{display:flex;gap:5px;flex-wrap:wrap;align-items:center;margin-bottom:5px}
+.lbl{font-size:11px;color:var(--color-text-secondary);white-space:nowrap}
+.val{font-size:12px;font-weight:500;min-width:24px;color:var(--color-text-primary);text-align:center}
+.sep{width:.5px;height:18px;background:var(--color-border-secondary);flex-shrink:0}
+input[type=text],select{height:28px;padding:0 8px;font-size:12px;border:.5px solid var(--color-border-tertiary);border-radius:8px;background:var(--color-background-primary);color:var(--color-text-primary)}
+input[type=range]{width:66px;cursor:pointer}
+input[type=color]{width:32px;height:28px;padding:1px 2px;border:.5px solid var(--color-border-tertiary);border-radius:6px;cursor:pointer;background:none}
+button{height:28px;padding:0 10px;font-size:11px;border:.5px solid var(--color-border-secondary);border-radius:8px;background:transparent;color:var(--color-text-primary);cursor:pointer}
+button:hover{background:var(--color-background-secondary)}
+button.act{background:var(--color-background-secondary);border-color:var(--color-border-primary)}
+#tabs{display:flex;gap:4px;margin-bottom:6px;align-items:center}
+#cw{border-radius:12px;overflow:hidden;border:.5px solid var(--color-border-tertiary);position:relative;user-select:none}
+.badge{font-size:10px;padding:2px 6px;border-radius:4px;background:var(--color-background-secondary);color:var(--color-text-secondary);border:.5px solid var(--color-border-tertiary)}
+#pdraw{display:none}
+#pdraw.act{display:block}
+#ptxt{display:block}
+#ptxt.hid{display:none}
+.hint{font-size:10px;color:var(--color-text-secondary);padding:2px 6px;border-radius:4px;background:var(--color-background-secondary)}
+</style>
+
+<div id="app">
+  <div id="tabs">
+    <button id="tab-t" class="act" onclick="switchTab('text')">文字模式</button>
+    <button id="tab-d" onclick="switchTab('draw')">繪圖模式</button>
+    <div class="sep" style="margin:0 3px"></div>
+    <button onclick="clearAll()">清除</button>
+    <div class="sep" style="margin:0 3px"></div>
+    <span class="hint">左鍵拖拉粒子 · 右鍵讓粒子擴散</span>
+  </div>
+
+  <div id="ptxt">
+    <div class="row">
+      <input type="text" id="txt" value="HELLO" style="flex:1;min-width:80px" placeholder="輸入文字…"/>
+      <select id="tdir"><option value="h">橫排</option><option value="v">直排</option></select>
+      <div class="sep"></div>
+      <select id="tden">
+        <option value="gradient">左疏右密</option><option value="center">中心密</option>
+        <option value="edge">邊緣密</option><option value="random">隨機</option>
+      </select>
+      <select id="tanim">
+        <option value="breathe">呼吸</option><option value="wave">波浪</option>
+        <option value="pulse">脈衝</option><option value="drift">漂流</option>
+      </select>
+    </div>
+    <div class="row">
+      <div class="lbl">字體</div>
+      <select id="gfsel" style="flex:1;min-width:100px"></select>
+      <input type="text" id="gfinp" placeholder="Google字體名稱…" style="flex:1;min-width:100px"/>
+      <button onclick="loadGF()">載入</button>
+      <div id="gfbadges" style="display:flex;gap:3px;flex-wrap:wrap"></div>
+    </div>
+    <div class="row">
+      <div class="lbl">大小</div><input type="range" id="ptsz" min="5" max="18" value="10" step="1"/>
+      <span class="val" id="ptsz-v">10</span>
+      <div class="sep"></div>
+      <div class="lbl">字距</div><input type="range" id="ptsp" min="0" max="60" value="10" step="1"/>
+      <span class="val" id="ptsp-v">10</span>
+      <div class="sep"></div>
+      <div class="lbl">粒子數</div><input type="range" id="ptden" min="50" max="800" value="300" step="10"/>
+      <span class="val" id="ptden-v">300</span>
+    </div>
+  </div>
+
+  <div id="pdraw">
+    <div class="row">
+      <div class="lbl">筆刷</div><input type="range" id="brsz" min="4" max="80" value="24" step="1"/>
+      <span class="val" id="brsz-v">24</span>
+      <div class="sep"></div>
+      <div class="lbl">密度</div><input type="range" id="brdn" min="1" max="30" value="10" step="1"/>
+      <span class="val" id="brdn-v">10</span>
+      <div class="sep"></div>
+      <div class="lbl">粒子大小</div><input type="range" id="drpsz" min="2" max="16" value="6" step="1"/>
+      <span class="val" id="drpsz-v">6</span>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="lbl">顏色模式</div>
+    <select id="cmode">
+      <option value="solid">單色</option><option value="multi">多色索引</option>
+      <option value="h-grad">水平漸層</option><option value="v-grad">垂直漸層</option>
+      <option value="radial">放射漸層</option><option value="diagonal">對角漸層</option>
+      <option value="wave">波浪流動</option><option value="rainbow">彩虹</option>
+      <option value="thermal">熱力圖</option>
+    </select>
+    <input type="color" id="c0" value="#1a7fd4"/>
+    <input type="color" id="c1" value="#e040fb"/>
+    <input type="color" id="c2" value="#ff6b35"/>
+    <input type="color" id="c3" value="#00e5ff"/>
+    <input type="color" id="c4" value="#76ff03"/>
+    <div class="sep"></div>
+    <div class="lbl">特效</div>
+    <select id="fxsel">
+      <option value="none">無</option><option value="glow">霓虹</option>
+      <option value="blur">模糊</option><option value="shadow">投影</option><option value="outline">描邊</option>
+    </select>
+    <input type="range" id="fxamt" min="0" max="100" value="60" step="1" style="width:56px"/>
+    <span class="val" id="fxamt-v">60</span>
+  </div>
+
+  <div id="cw"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
+<script>
+let particles=[],myp5,fr=0,mode='text';
+let totalBW=1,totalBH=1,bOX=0,bOY=0;
+let isDrawing=false;
+let mouseHeld=false,rightHeld=false;
+let mouseCanvasX=0,mouseCanvasY=0;
+let loadedGFonts=[];
+let offscreenG=null;
+let fontSampleCache={};
+
+const SYSFONT_LIST=['Arial','Helvetica','Georgia','Times New Roman','Courier New','Verdana','Impact','Tahoma','Garamond','Palatino Linotype','Futura','Franklin Gothic','Gill Sans','Optima'];
+
+function h2rgb(h){return[parseInt(h.slice(1,3),16),parseInt(h.slice(3,5),16),parseInt(h.slice(5,7),16)];}
+function hsl2rgb(h,s,l){let r,g,b;if(s===0){r=g=b=l;}else{const q=l<.5?l*(1+s):l+s-l*s,p=2*l-q;r=hq(p,q,h+1/3);g=hq(p,q,h);b=hq(p,q,h-1/3);}return[Math.round(r*255),Math.round(g*255),Math.round(b*255)];}
+function hq(p,q,t){if(t<0)t+=1;if(t>1)t-=1;if(t<1/6)return p+(q-p)*6*t;if(t<.5)return q;if(t<2/3)return p+(q-p)*(2/3-t)*6;return p;}
+function lp(a,b,t){return a+(b-a)*t;}
+
+function lerpColors(stops,t){
+  t=Math.max(0,Math.min(1,t));
+  const seg=1/(stops.length-1);
+  const i=Math.min(Math.floor(t/seg),stops.length-2);
+  const lt=(t-i*seg)/seg;
+  const a=stops[i],b=stops[i+1];
+  return[Math.round(a[0]+(b[0]-a[0])*lt),Math.round(a[1]+(b[1]-a[1])*lt),Math.round(a[2]+(b[2]-a[2])*lt)];
+}
+function getStops(){return['c0','c1','c2','c3','c4'].map(id=>h2rgb(document.getElementById(id).value));}
+
+function getParticleColor(rx,ry,idx,total){
+  const m=document.getElementById('cmode').value;
+  const stops=getStops();
+  let t=0;
+  if(m==='solid')return stops[0];
+  if(m==='multi')t=idx/Math.max(total-1,1);
+  else if(m==='h-grad')t=rx/Math.max(totalBW,1);
+  else if(m==='v-grad')t=ry/Math.max(totalBH,1);
+  else if(m==='radial'){const cx=totalBW/2,cy=totalBH/2;t=Math.min(1,Math.sqrt((rx-cx)**2+(ry-cy)**2)/Math.max(cx,cy,1));}
+  else if(m==='diagonal')t=Math.min(1,(rx/Math.max(totalBW,1)+ry/Math.max(totalBH,1))/2);
+  else if(m==='wave'){t=(.5+.5*Math.sin(rx/Math.max(totalBW,1)*Math.PI*4+fr*.025+ry/Math.max(totalBH,1)*Math.PI*2));return lerpColors(stops,Math.max(0,Math.min(1,t)));}
+  else if(m==='rainbow'){return hsl2rgb(((rx/Math.max(totalBW,1)*360+fr*1.5)%360)/360,.9,.58);}
+  else if(m==='thermal'){
+    const nt=rx/Math.max(totalBW,1);
+    const ts=[[0,0,80],[0,0,255],[0,200,255],[0,255,0],[255,255,0],[255,100,0],[255,0,0],[160,0,0]];
+    const si=Math.min(Math.floor(nt*(ts.length-1)),ts.length-2);
+    const sl=nt*(ts.length-1)-si;
+    const A=ts[si],B=ts[si+1];
+    return[Math.round(A[0]+(B[0]-A[0])*sl),Math.round(A[1]+(B[1]-A[1])*sl),Math.round(A[2]+(B[2]-A[2])*sl)];
+  }
+  return lerpColors(stops,Math.max(0,Math.min(1,t)));
+}
+
+function getFontName(){
+  const v=document.getElementById('gfsel').value;
+  if(!v)return null;
+  if(v.startsWith('sys:'))return v.slice(4);
+  if(v.startsWith('gf:'))return v.slice(3);
+  return null;
+}
+
+function sampleFontToPoints(p,text,fontName,targetCount){
+  const cacheKey=fontName+'|'+text+'|'+targetCount;
+  if(fontSampleCache[cacheKey])return fontSampleCache[cacheKey];
+
+  const W=p.width,H=p.height;
+  const og=p.createGraphics(W,H);
+  og.pixelDensity(1);
+  og.background(0);
+  og.fill(255);
+  og.noStroke();
+
+  const fontSize=Math.min(H*.75,W/Math.max(text.length,.5)*.85);
+  og.textFont(fontName||'Arial');
+  og.textSize(fontSize);
+  og.textAlign(og.CENTER,og.CENTER);
+  og.text(text,W/2,H/2);
+  og.loadPixels();
+
+  const pts=[];
+  const step=Math.max(2,Math.floor(Math.sqrt((W*H)/targetCount/3)));
+  for(let y=0;y<H;y+=step){
+    for(let x=0;x<W;x+=step){
+      const idx4=(y*W+x)*4;
+      if(og.pixels[idx4]>60){
+        pts.push({
+          tx:x+Math.random()*step*.5-step*.25,
+          ty:y+Math.random()*step*.5-step*.25
+        });
+      }
+    }
+  }
+  og.remove();
+
+  totalBW=W;totalBH=H;bOX=0;bOY=0;
+  fontSampleCache[cacheKey]=pts;
+  return pts;
+}
+
+function buildText(p){
+  const txt=(document.getElementById('txt').value||' ').toUpperCase().slice(0,document.getElementById('tdir').value==='v'?5:10);
+  const targetCount=parseInt(document.getElementById('ptden').value);
+  const fontName=getFontName();
+  const pts=sampleFontToPoints(p,txt,fontName,targetCount);
+
+  particles=[];
+  totalBW=p.width;totalBH=p.height;bOX=0;bOY=0;
+
+  const step=Math.max(1,Math.floor(pts.length/targetCount));
+  for(let i=0;i<pts.length;i+=step){
+    const pt=pts[i];
+    const rnd=Math.random();
+    const sz=parseInt(document.getElementById('ptsz').value);
+    const types=['dot_sm','circle_solid','square_solid','circle_hollow','diamond','ring_sq','big_circle','sq_circle_hole'];
+    particles.push({
+      x:Math.random()*p.width,y:Math.random()*p.height,
+      tx:pt.tx,ty:pt.ty,
+      ox:pt.tx,oy:pt.ty,
+      type:types[Math.floor(rnd*types.length)],
+      size:2,tsize:sz*(0.6+rnd*.9),
+      alpha:0,talpha:180+Math.round(rnd*75),
+      speed:.035+Math.random()*.05,
+      phaseOff:Math.random()*Math.PI*2,
+      relX:pt.tx,relY:pt.ty,
+      vx:0,vy:0,
+      exploded:false
+    });
+  }
+  fr=0;
+}
+
+function buildDraw(p,cx,cy){
+  const br=parseInt(document.getElementById('brsz').value);
+  const bd=parseInt(document.getElementById('brdn').value);
+  const dps=parseInt(document.getElementById('drpsz').value);
+  totalBW=p.width;totalBH=p.height;bOX=0;bOY=0;
+  for(let i=0;i<bd;i++){
+    const angle=Math.random()*Math.PI*2;
+    const r=Math.pow(Math.random(),.5)*br;
+    const tx=cx+Math.cos(angle)*r,ty=cy+Math.sin(angle)*r;
+    if(tx<1||ty<1||tx>p.width-1||ty>p.height-1)continue;
+    const rnd=Math.random();
+    const types=['circle_solid','dot_sm','square_solid','diamond','circle_hollow'];
+    particles.push({
+      x:tx,y:ty,tx,ty,ox:tx,oy:ty,
+      type:types[Math.floor(rnd*types.length)],
+      size:dps*.4,tsize:dps*(0.5+rnd*.8),
+      alpha:0,talpha:200+Math.round(rnd*55),
+      speed:.05+Math.random()*.05,
+      phaseOff:Math.random()*Math.PI*2,
+      relX:tx,relY:ty,vx:0,vy:0,exploded:false
+    });
+  }
+}
+
+function clearAll(){particles=[];fontSampleCache={};fr=0;}
+
+new p5(function(p){
+  myp5=p;
+  p.setup=function(){
+    const wrap=document.getElementById('cw');
+    const sw=wrap.offsetWidth||700,sh=Math.max(280,Math.min(440,sw*.5));
+    p.createCanvas(sw,sh).parent('cw');
+    p.canvas.setAttribute('oncontextmenu','return false');
+    populateSysFonts();
+    setTimeout(()=>buildText(p),100);
+
+    p.canvas.addEventListener('mousedown',e=>{
+      e.preventDefault();
+      const pos=getCP(e,p);
+      mouseCanvasX=pos.x;mouseCanvasY=pos.y;
+      if(e.button===2){
+        rightHeld=true;
+        explodeAround(pos.x,pos.y);
+      }else{
+        mouseHeld=true;
+        if(mode==='draw'){isDrawing=true;buildDraw(p,pos.x,pos.y);}
+      }
+    });
+
+    p.canvas.addEventListener('mousemove',e=>{
+      const pos=getCP(e,p);
+      mouseCanvasX=pos.x;mouseCanvasY=pos.y;
+      if(mode==='draw'&&isDrawing)buildDraw(p,pos.x,pos.y);
+    });
+
+    p.canvas.addEventListener('mouseup',e=>{
+      if(e.button===2)rightHeld=false;
+      else{mouseHeld=false;isDrawing=false;}
+    });
+
+    p.canvas.addEventListener('mouseleave',()=>{mouseHeld=false;rightHeld=false;isDrawing=false;});
+    p.canvas.addEventListener('contextmenu',e=>e.preventDefault());
+
+    p.canvas.addEventListener('touchstart',e=>{
+      e.preventDefault();
+      const pos=getCP(e.touches[0],p);
+      mouseCanvasX=pos.x;mouseCanvasY=pos.y;
+      if(mode==='draw'){isDrawing=true;buildDraw(p,pos.x,pos.y);}
+      else mouseHeld=true;
+    },{passive:false});
+    p.canvas.addEventListener('touchmove',e=>{
+      e.preventDefault();
+      const pos=getCP(e.touches[0],p);
+      mouseCanvasX=pos.x;mouseCanvasY=pos.y;
+      if(mode==='draw'&&isDrawing)buildDraw(p,pos.x,pos.y);
+    },{passive:false});
+    p.canvas.addEventListener('touchend',()=>{mouseHeld=false;isDrawing=false;});
+  };
+
+  p.draw=function(){
+    p.background(246,246,242);
+    fr++;
+    const fxSel=document.getElementById('fxsel').value;
+    const fxAmt=parseInt(document.getElementById('fxamt').value)/100;
+    const anim=document.getElementById('tanim').value;
+    const MX=mouseCanvasX,MY=mouseCanvasY;
+    const pullR=80;
+
+    if(fxSel==='blur')p.drawingContext.filter=`blur(${Math.round(fxAmt*5)}px)`;
+    else p.drawingContext.filter='none';
+
+    for(let idx=0;idx<particles.length;idx++){
+      const s=particles[idx];
+      const dx=MX-s.x,dy=MY-s.y;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+
+      if(mouseHeld&&mode!=='draw'){
+        if(dist<pullR){
+          const strength=Math.pow(1-dist/pullR,1.5)*0.22;
+          s.vx+=(dx)*strength;
+          s.vy+=(dy)*strength;
+          s.vx*=.82;s.vy*=.82;
+          s.x+=s.vx;s.y+=s.vy;
+          s.tx=lp(s.tx,s.x+s.vx*2,.12);
+          s.ty=lp(s.ty,s.y+s.vy*2,.12);
+        }else{
+          s.vx*=.88;s.vy*=.88;
+          s.tx=lp(s.tx,s.ox,.025);s.ty=lp(s.ty,s.oy,.025);
+          s.x=lp(s.x,s.tx,s.speed);s.y=lp(s.y,s.ty,s.speed);
+        }
+      }else{
+        s.vx*=.9;s.vy*=.9;
+        s.tx=lp(s.tx,s.ox,.03);s.ty=lp(s.ty,s.oy,.03);
+        s.x=lp(s.x,s.tx,s.speed+Math.abs(s.vx+s.vy)*.01);
+        s.y=lp(s.y,s.ty,s.speed+Math.abs(s.vx+s.vy)*.01);
+      }
+
+      s.size=lp(s.size,s.tsize,s.speed);
+      s.alpha=lp(s.alpha,s.talpha,s.speed*.6);
+
+      const t=fr*.016+s.phaseOff;
+      let wx=0,wy=0,ws=1;
+      const inPull=(mouseHeld&&dist<pullR);
+      if(!inPull){
+        if(anim==='breathe'){wx=Math.sin(t)*.7;wy=Math.cos(t*.75)*.6;ws=1+Math.sin(t*1.1)*.055;}
+        else if(anim==='wave'){wy=Math.sin(fr*.02+s.relX*.012)*1.8;wx=Math.cos(fr*.014+s.relY*.01)*.8;}
+        else if(anim==='pulse'){ws=1+Math.sin(fr*.038+s.phaseOff*2)*.14;}
+        else{wx=Math.sin(fr*.009+s.phaseOff)*1.0;wy=Math.cos(fr*.011+s.phaseOff*1.3)*.9;ws=1+Math.sin(fr*.02+s.phaseOff)*.04;}
+      }else{ws=1.2+Math.sin(fr*.08+s.phaseOff)*.15;}
+
+      const px=s.x+wx,py=s.y+wy,sz=s.size*ws,sw2=Math.max(.8,sz*.14);
+      const [cr,cg,cb]=getParticleColor(s.relX,s.relY,idx,particles.length);
+      const a=Math.min(255,s.alpha);
+
+      if(fxSel==='glow'){
+        const ctx=p.drawingContext;ctx.save();
+        ctx.shadowColor=`rgba(${cr},${cg},${cb},${.6+fxAmt*.35})`;
+        ctx.shadowBlur=sz*(1.8+fxAmt*4);
+        drawShape(p,s.type,px,py,sz,sw2,cr,cg,cb,a);
+        ctx.restore();
+      }else if(fxSel==='shadow'){
+        const ctx=p.drawingContext,sd=Math.round(fxAmt*16);
+        ctx.save();ctx.shadowColor=`rgba(${Math.round(cr*.25)},${Math.round(cg*.25)},${Math.round(cb*.25)},0.55)`;
+        ctx.shadowOffsetX=sd;ctx.shadowOffsetY=sd;ctx.shadowBlur=0;
+        drawShape(p,s.type,px,py,sz,sw2,cr,cg,cb,a);ctx.restore();
+      }else if(fxSel==='outline'){
+        p.push();p.translate(px,py);p.stroke(cr,cg,cb,a*.7);p.strokeWeight(sz*.1+fxAmt*2.5);p.noFill();p.ellipse(0,0,sz+fxAmt*6,sz+fxAmt*6);p.pop();
+        drawShape(p,s.type,px,py,sz,sw2,cr,cg,cb,a);
+      }else{
+        drawShape(p,s.type,px,py,sz,sw2,cr,cg,cb,a);
+      }
+    }
+    p.drawingContext.filter='none';
+
+    if(mouseHeld&&mode!=='draw'){
+      p.push();p.noFill();p.stroke(120,120,120,60);p.strokeWeight(.5);p.ellipse(MX,MY,pullR*2,pullR*2);p.pop();
+    }
+  };
+
+  p.windowResized=function(){
+    const wrap=document.getElementById('cw');
+    const sw=wrap.offsetWidth||700,sh=Math.max(280,Math.min(440,sw*.5));
+    p.resizeCanvas(sw,sh);fontSampleCache={};if(mode==='text')buildText(p);
+  };
+});
+
+function explodeAround(cx,cy){
+  const r=120;
+  const strength=18;
+  for(const s of particles){
+    const dx=s.x-cx,dy=s.y-cy;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    if(dist<r&&dist>0.1){
+      const f=Math.pow(1-dist/r,1.2)*strength;
+      const nx=dx/dist,ny=dy/dist;
+      s.vx+=nx*f*(0.7+Math.random()*.6);
+      s.vy+=ny*f*(0.7+Math.random()*.6);
+      s.tx+=nx*f*8;s.ty+=ny*f*8;
+    }
+  }
+}
+
+function getCP(e,p){
+  const r=p.canvas.getBoundingClientRect();
+  return{x:(e.clientX-r.left)*(p.width/r.width),y:(e.clientY-r.top)*(p.height/r.height)};
+}
+
+function drawShape(p,type,px,py,sz,sw,cr,cg,cb,a){
+  p.push();p.translate(px,py);
+  switch(type){
+    case 'dot_xs':p.noStroke();p.fill(cr,cg,cb,a*.7);p.ellipse(0,0,sz*.5,sz*.5);break;
+    case 'dot_sm':p.noStroke();p.fill(cr,cg,cb,a);p.ellipse(0,0,sz*.75,sz*.75);break;
+    case 'circle_hollow':p.stroke(cr,cg,cb,a);p.strokeWeight(sw);p.noFill();p.ellipse(0,0,sz,sz);break;
+    case 'square_hollow':p.stroke(cr,cg,cb,a);p.strokeWeight(sw);p.noFill();p.rectMode(p.CENTER);p.rect(0,0,sz,sz,1);break;
+    case 'square_solid':p.noStroke();p.fill(cr,cg,cb,a);p.rectMode(p.CENTER);p.rect(0,0,sz,sz,1);break;
+    case 'circle_solid':p.noStroke();p.fill(cr,cg,cb,a);p.ellipse(0,0,sz,sz);break;
+    case 'big_circle':p.noStroke();p.fill(cr,cg,cb,a);p.ellipse(0,0,sz*1.15,sz*1.15);break;
+    case 'big_block':p.noStroke();p.fill(cr,cg,cb,a);p.rectMode(p.CENTER);p.rect(0,0,sz*1.15,sz*1.15,1.5);break;
+    case 'ring_sq':p.stroke(cr,cg,cb,a);p.strokeWeight(sw);p.noFill();p.ellipse(0,0,sz,sz);p.rectMode(p.CENTER);p.rect(0,0,sz*.42,sz*.42,.5);break;
+    case 'diamond':{const d2=sz*.5;p.noStroke();p.fill(cr,cg,cb,a);p.quad(0,-d2,d2,0,0,d2,-d2,0);break;}
+    case 'sq_circle_hole':p.noStroke();p.fill(cr,cg,cb,a);p.rectMode(p.CENTER);p.rect(0,0,sz,sz,1);{const hr=sz*.3;p.erase();p.ellipse(0,0,hr*2,hr*2);p.noErase();}break;
+    default:p.noStroke();p.fill(cr,cg,cb,a);p.ellipse(0,0,sz,sz);
+  }
+  p.pop();
+}
+
+function populateSysFonts(){
+  const sel=document.getElementById('gfsel');
+  const def=document.createElement('option');def.value='';def.textContent='— 選擇字體 —';sel.appendChild(def);
+  SYSFONT_LIST.forEach(f=>{const o=document.createElement('option');o.value='sys:'+f;o.textContent=f;sel.appendChild(o);});
+}
+
+function loadGF(){
+  const name=document.getElementById('gfinp').value.trim();
+  if(!name||loadedGFonts.includes(name))return;
+  const link=document.createElement('link');
+  link.rel='stylesheet';
+  link.href='https://fonts.googleapis.com/css2?family='+encodeURIComponent(name).replace(/%20/g,'+')+'&display=swap';
+  document.head.appendChild(link);
+  loadedGFonts.push(name);
+  const o=document.createElement('option');o.value='gf:'+name;o.textContent=name;
+  document.getElementById('gfsel').appendChild(o);
+  document.getElementById('gfsel').value='gf:'+name;
+  const b=document.createElement('span');b.className='badge';b.textContent=name;
+  document.getElementById('gfbadges').appendChild(b);
+  document.getElementById('gfinp').value='';
+  fontSampleCache={};
+  setTimeout(()=>{if(myp5&&mode==='text')buildText(myp5);},800);
+}
+
+function switchTab(t){
+  mode=t;
+  document.getElementById('tab-t').className=t==='text'?'act':'';
+  document.getElementById('tab-d').className=t==='draw'?'act':'';
+  document.getElementById('ptxt').className=t==='text'?'':'hid';
+  document.getElementById('pdraw').className=t==='draw'?'act':'';
+  document.getElementById('cw').style.cursor=t==='draw'?'crosshair':'default';
+  if(t==='text'&&myp5){fontSampleCache={};buildText(myp5);}
+}
+
+function rebuildText(){if(mode==='text'&&myp5){fontSampleCache={};buildText(myp5);}}
+
+['txt','tdir','tden'].forEach(id=>document.getElementById(id).addEventListener('change',rebuildText));
+document.getElementById('txt').addEventListener('input',rebuildText);
+document.getElementById('tanim').addEventListener('change',()=>{});
+document.getElementById('gfsel').addEventListener('change',rebuildText);
+
+['ptsz','ptsp','ptden'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    document.getElementById(id+'-v').textContent=document.getElementById(id).value;
+    rebuildText();
+  });
+});
+['brsz','brdn','drpsz'].forEach(id=>{
+  document.getElementById(id).addEventListener('input',()=>{
+    document.getElementById(id+'-v').textContent=document.getElementById(id).value;
+  });
+});
+document.getElementById('fxamt').addEventListener('input',()=>{
+  document.getElementById('fxamt-v').textContent=document.getElementById('fxamt').value;
+});
+</script>
